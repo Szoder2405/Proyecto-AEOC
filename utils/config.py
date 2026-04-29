@@ -33,18 +33,35 @@ SIM_CONFIG = {
 MPC_CONFIG = {
     'Q': 1e11 * np.array([[100,0,0],[0,30,0],[0,0,5]]),      # Peso error proporcional
     'R': 0.01 * np.eye(3),      # Peso esfuerzo de control
-    'v_max': np.array([1.0, 1.0, 1.0]),
-    'v_min': -np.array([1.0, 1.0, 1.0])
+    'Q_term': 500.0,            
+    'w_int': 1e6,
+    'v_max': np.array([2.0, 2.0, 2.0])
 }
 
 # =============================================
 # Parámetros del juego cooperativo
 # =============================================
 GAME_CONFIG = {
-    'alpha': 1.0,               # Peso del costo de movimiento individual
-    'beta': 10.0,               # Peso del error global de posición
-    'max_game_iters': 50,       # Iteraciones máximas del juego
-    'game_tol': 1e-5            # Tolerancia para equilibrio de Nash
+    'alpha': 0.1,               # Peso del costo de movimiento individual
+    'beta': 100.0,               # Peso del error global de posición
+    'max_game_iters': 100,       # Iteraciones máximas del juego
+    'game_tol': 1e-6            # Tolerancia para equilibrio de Nash
+}
+
+# =============================================
+# Parámetros del solver híbrido
+# =============================================
+
+HYBRID_CONFIG = {
+    'horizon': 30,
+    'dt': 0.05,
+    'Q_pos': 100 * np.array([[1,0,0],[0,3,0],[0,0,5]]),
+    'r_vel': 0.1,
+    'w_acc': 0.01,
+    'w_int': 1e6,          
+    'Q_term': 200.0,       
+    'game_iters': 100,
+    'v_max': np.array([1.0, 1.0, 1.0])
 }
 
 # =============================================

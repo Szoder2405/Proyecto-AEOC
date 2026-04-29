@@ -88,22 +88,31 @@ class ArmVisualizer:
         plt.pause(0.01)
 
     def animate_trajectory(self, q_trajectory: List[np.ndarray], target: Optional[np.ndarray] = None,
-                        interval: float = 0.05, save_path: str = "animation.gif"):
+                        interval: float = 0.05, save_path: str = "animation.gif",
+                        desired_path: Optional[np.ndarray] = None):
         """
-        Genera un GIF de la trayectoria del brazo sin mostrar animación en tiempo real.
+        Genera un GIF de la trayectoria del brazo mostrando también
+        la trayectoria deseada y la real del efector.
 
         Args:
             q_trajectory: Lista de vectores de ángulos articulares.
             target: Punto objetivo fijo (opcional).
             interval: Tiempo entre frames en segundos (no usado en esta versión).
             save_path: Ruta donde guardar el GIF.
+            desired_path: Array (N,3) con la trayectoria deseada (opcional).
         """
         print(f"Iniciando generación de GIF con {len(q_trajectory)} frames...")
+        
+        # Precalcular todas las posiciones reales del efector final
+        real_positions = []
+        for q in q_trajectory:
+            pos, _ = self.arm.forward_kinematics(q)
+            real_positions.append(pos)
+        real_positions = np.array(real_positions)
         
         frames = []
         
         for i, q in enumerate(q_trajectory):
-            # Limpiar ejes y redibujar
             self.ax.clear()
             self._setup_axes()
             
@@ -112,18 +121,26 @@ class ArmVisualizer:
             x = [p[0] for p in positions]
             y = [p[1] for p in positions]
             z = [p[2] for p in positions]
-            
-            # Eslabones
-            self.ax.plot(x, y, z, 'o-', color='blue', linewidth=4, markersize=8, 
+            self.ax.plot(x, y, z, 'o-', color='blue', linewidth=4, markersize=8,
                         alpha=0.8, markerfacecolor='red', markeredgecolor='black')
             
             # Efector final
             self.ax.scatter(x[-1], y[-1], z[-1], color='green', s=100, label='Efector final')
             
-            # Objetivo
+            # Objetivo fijo (si se dio)
             if target is not None:
-                self.ax.scatter(target[0], target[1], target[2], 
+                self.ax.scatter(target[0], target[1], target[2],
                                 color='red', s=100, marker='*', label='Objetivo')
+            
+            # Trayectoria deseada (si se proporciona)
+            if desired_path is not None:
+                self.ax.plot(desired_path[:, 0], desired_path[:, 1], desired_path[:, 2],
+                            color='magenta', linewidth=2, linestyle='--', label='Deseada')
+            
+            # Trayectoria real hasta el frame actual
+            if i > 0:  # al menos dos puntos para una línea
+                self.ax.plot(real_positions[:i+1, 0], real_positions[:i+1, 1], real_positions[:i+1, 2],
+                            color='orange', linewidth=2, linestyle='-', label='Real')
             
             # Base
             self.ax.scatter(0, 0, 0, color='black', s=150, marker='s', label='Base')
@@ -131,25 +148,21 @@ class ArmVisualizer:
             self.ax.legend(loc='upper left')
             self.ax.set_title(f'Frame {i+1}/{len(q_trajectory)}')
             
-            # Forzar renderizado y capturar frame
+            # Renderizar y capturar
             self.fig.canvas.draw()
-            
-            # Convertir canvas a array numpy
             frame = np.array(self.fig.canvas.renderer.buffer_rgba())
             frames.append(frame)
             
-            # Mostrar progreso cada 10 frames
             if (i + 1) % 10 == 0:
                 print(f"  Procesado frame {i+1}/{len(q_trajectory)}")
         
-        # Guardar como GIF
+        # Guardar GIF
         try:
             import imageio
             imageio.mimsave(save_path, frames, fps=10, loop=0)
             print(f"✅ GIF guardado exitosamente en: {save_path}")
         except ImportError:
             print("❌ imageio no está instalado. Instálalo con: pip install imageio")
-            return
         
         print(f"Dimensiones del GIF: {frames[0].shape[1]}x{frames[0].shape[0]} píxeles")
 
@@ -170,6 +183,20 @@ class ArmVisualizer:
         points = np.array(points)
         self.ax.plot(points[:, 0], points[:, 1], points[:, 2],
                      color=color, linewidth=2, linestyle='--', label=label)
+        self.ax.legend()
+
+    def plot_desired_path(self, desired_points: np.ndarray, color: str = 'magenta',
+                      label: str = 'Deseada'):
+        """
+        Dibuja la trayectoria deseada como una línea discontinua.
+
+        Args:
+            desired_points: Array (N, 3) con las coordenadas de la trayectoria.
+            color: Color de la línea.
+            label: Etiqueta para la leyenda.
+        """
+        self.ax.plot(desired_points[:, 0], desired_points[:, 1], desired_points[:, 2],
+                    color=color, linewidth=2, linestyle='--', label=label)
         self.ax.legend()
 
     def compare_configurations(self, configs: List[Tuple[np.ndarray, str, str]],

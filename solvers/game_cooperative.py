@@ -129,8 +129,8 @@ class CooperativeGameSolver:
         }
 
     def run_closed_loop(self, q0: np.ndarray, p_target: np.ndarray,
-                        max_steps: int = 100, stall_threshold: float = 1e-4,
-                        stall_steps: int = 5) -> dict:
+                        max_steps: int = 100, tol: float = 1e-3, 
+                        stall_threshold: float = 1e-4, stall_steps: int = 5) -> dict:
         """
         Ejecuta el control en lazo cerrado: en cada paso, se resuelve el juego completo
         desde la configuración actual para obtener el siguiente estado.
@@ -171,7 +171,7 @@ class CooperativeGameSolver:
             error_history.append(error)
 
             # Verificar éxito
-            if error < 0.01:
+            if error < tol:
                 print(f"Juego (lazo cerrado): Objetivo alcanzado en {step+1} pasos. Error: {error:.5f}")
                 break
 
@@ -192,5 +192,5 @@ class CooperativeGameSolver:
             'p': np.array(p_history),
             'error': np.array(error_history),
             'steps': step + 1,
-            'success': error_history[-1] < 0.01
+            'success': error_history[-1] < tol
         }
