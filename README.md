@@ -50,7 +50,7 @@ error de seguimiento, suavidad y costo computacional.
 
   
 
-   ```bash
+   ```
 
    git clone <URL-del-repo>
 
@@ -64,7 +64,7 @@ error de seguimiento, suavidad y costo computacional.
 
   
 
-   ```bash
+   ```
 
    conda env create -f environment.yml
 
@@ -80,7 +80,7 @@ error de seguimiento, suavidad y costo computacional.
 
   
 
-   ```bash
+   ```
 
    conda activate brazo_robotico
 
