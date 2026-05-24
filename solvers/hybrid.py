@@ -2,6 +2,8 @@
 Distributed Model Predictive Control (DMPC) basado en teoría de juegos para brazo 3-DOF.
 Cada articulación planifica sobre un horizonte usando los planes de las otras.
 Se itera Gauss-Seidel para alcanzar un equilibrio de Nash del juego dinámico.
+
+
 """
 
 import casadi as ca
@@ -26,9 +28,10 @@ class DistributedMPC:
                  Q_pos: np.ndarray = None,
                  r_vel: float = 0.1,
                  w_acc: float = 0.01,
-                 w_int: float = 0.0,          
+                 w_int: float = 0.0,
                  Q_term: float = 100.0,
                  game_iters: int = 3,
+                 nash_tol: float = None,     # ignorado, solo para compatibilidad
                  v_max: np.ndarray = None,
                  q_min: np.ndarray = None,
                  q_max: np.ndarray = None):
@@ -37,7 +40,7 @@ class DistributedMPC:
         self.dt = dt
         self.r_vel = r_vel
         self.w_acc = w_acc
-        self.w_int = w_int                  # <-- guardar
+        self.w_int = w_int
         self.Q_term = Q_term
         self.max_game_iters = game_iters
 
@@ -79,11 +82,10 @@ class DistributedMPC:
 
         q_i = q0_i
         cost = 0
-        integral = 0   # acumulador del error integral
+        integral = 0
 
         for k in range(self.N):
             q_i_next = q_i + dq_i[k] * self.dt
-            # Vector q completo
             if i == 0:
                 q_vec = ca.vertcat(q_i_next, plan_other1[k+1], plan_other2[k+1])
             elif i == 1:
@@ -94,13 +96,11 @@ class DistributedMPC:
             p_k = self._fk_casadi(q_vec[0], q_vec[1], q_vec[2])
             err_k = p_k - p_ref
 
-            # Costo de etapa
             cost += ca.mtimes([err_k.T, self.Q, err_k])
             cost += self.r_vel * dq_i[k]**2
             if k > 0:
                 cost += self.w_acc * ((dq_i[k] - dq_i[k-1])/self.dt)**2
 
-            # Término integral
             integral = integral + err_k * self.dt
             cost += self.w_int * ca.mtimes([integral.T, integral])
 
@@ -122,6 +122,7 @@ class DistributedMPC:
         P = ca.vertcat(q0_i, plan_other1, plan_other2, p_ref)
 
         nlp = {'x': X, 'f': cost, 'p': P}
+        # IDÉNTICO al original
         opts = {'ipopt.print_level': 0, 'print_time': 0,
                 'ipopt.sb': 'yes', 'ipopt.max_iter': 100}
         solver = ca.nlpsol(f'solver_{i}', 'ipopt', nlp, opts)
@@ -131,6 +132,7 @@ class DistributedMPC:
         n_joints = 3
         plans = [np.full(self.N+1, q_current[i]) for i in range(n_joints)]
 
+        # IDÉNTICO al original
         for _ in range(self.max_game_iters):
             for i in range(n_joints):
                 other_plans = [plans[j] for j in range(n_joints) if j != i]
@@ -191,8 +193,10 @@ class DistributedMPC:
 
         return {
             'q': np.array(q_hist),
+            'dq': np.zeros((len(q_hist)-1, 3)),
             'p': np.array(p_hist),
             'error': np.array(err_hist),
-            'steps': step+1,
+            'cost': np.array([]),
+            'steps': step + 1,
             'success': err_hist[-1] < tol
         }

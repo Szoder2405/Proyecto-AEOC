@@ -1,0 +1,13 @@
+name: brazo_robotico
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12
+  - casadi
+  - ipopt
+  - numpy
+  - scipy
+  - matplotlib
+  - opencv
+  - imageio

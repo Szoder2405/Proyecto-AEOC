@@ -160,9 +160,9 @@ class ArmVisualizer:
         try:
             import imageio
             imageio.mimsave(save_path, frames, fps=10, loop=0)
-            print(f"✅ GIF guardado exitosamente en: {save_path}")
+            print(f"GIF guardado exitosamente en: {save_path}")
         except ImportError:
-            print("❌ imageio no está instalado. Instálalo con: pip install imageio")
+            print("imageio no está instalado. Instálalo con: pip install imageio")
         
         print(f"Dimensiones del GIF: {frames[0].shape[1]}x{frames[0].shape[0]} píxeles")
 

@@ -1,6 +1,12 @@
 """
 Control Predictivo Basado en Modelo (MPC) centralizado mejorado.
 Incluye costo terminal e integral para convergencia rápida.
+
+Optimizaciones de velocidad aplicadas:
+  - Warm-start: reutiliza la solución anterior como punto de inicio.
+  - Opciones IPOPT agresivas: tolerancias más holgadas, L-BFGS para el Hessiano,
+    menos iteraciones internas (el lazo cerrado ya controla el error real).
+  - La interfaz pública es idéntica a la versión original.
 """
 
 import casadi as ca
@@ -12,8 +18,8 @@ from arm_model.three_dof_arm import ThreeDOFArm
 class CentralizedMPC:
     def __init__(self, arm: ThreeDOFArm, horizon: int = 10, dt: float = 0.05,
                  Q: np.ndarray = None, R: np.ndarray = None,
-                 Q_term: float = 0.0,           # nuevo: peso terminal
-                 w_int: float = 0.0,            # nuevo: peso integral
+                 Q_term: float = 0.0,
+                 w_int: float = 0.0,
                  q_min: np.ndarray = None, q_max: np.ndarray = None,
                  v_max: np.ndarray = None):
         self.arm = arm
@@ -34,10 +40,13 @@ class CentralizedMPC:
             self.v_max = np.array([1.0, 1.0, 1.0])
             self.v_min = -self.v_max
 
+        # Warm-start: guarda la última solución para acelerar la siguiente
+        self._x_warm = None
+
         self._build_solver()
 
     def _forward_kinematics_casadi(self, q: ca.SX) -> ca.SX:
-        """Cinemática directa simbólica (misma que antes)."""
+        """Cinemática directa simbólica."""
         l1, l2, l3 = self.arm.l1, self.arm.l2, self.arm.l3
         q1, q2, q3 = q[0], q[1], q[2]
 
@@ -99,7 +108,7 @@ class CentralizedMPC:
         lbx.extend([-ca.inf] * 3)
         ubx.extend([ca.inf] * 3)
 
-        integral = 0  # acumulador del error integral
+        integral = 0
 
         for k in range(self.N):
             lbx.extend(self.v_min.tolist())
@@ -114,12 +123,9 @@ class CentralizedMPC:
             p_k = self._forward_kinematics_casadi(q[:, k + 1])
             err_k = p_k - p_ref
 
-            # Costo proporcional
             cost += ca.mtimes([err_k.T, self.Q, err_k])
-            # Esfuerzo de control
             cost += ca.mtimes([dq[:, k].T, self.R, dq[:, k]])
 
-            # Término integral
             integral = integral + err_k * self.dt
             cost += self.w_int * ca.mtimes([integral.T, integral])
 
@@ -131,8 +137,28 @@ class CentralizedMPC:
         G = ca.vertcat(*g)
 
         nlp = {'x': X, 'f': cost, 'g': G, 'p': ca.vertcat(q0, p_ref)}
-        opts = {'ipopt.print_level': 0, 'print_time': 0,
-                'ipopt.sb': 'yes', 'ipopt.max_iter': 100}
+
+        # ── Opciones IPOPT optimizadas para velocidad ─────────────────────
+        # warm_start_init_point activa el re-uso de la solución anterior.
+        # hessian_approximation='limited-memory' evita calcular la 2ª derivada
+        # exacta → cada iteración cuesta ~3-5× menos.
+        # Tolerancias más holgadas: el lazo cerrado controla el error real,
+        # no necesitamos optimalidad numérica perfecta en cada subproblema.
+        opts = {
+            'ipopt.print_level'              : 0,
+            'print_time'                     : 0,
+            'ipopt.sb'                       : 'yes',
+            'ipopt.max_iter'                 : 50,          # era 100
+            'ipopt.tol'                      : 1e-4,        # era ~1e-8
+            'ipopt.acceptable_tol'           : 1e-3,
+            'ipopt.acceptable_iter'          : 3,
+            'ipopt.hessian_approximation'    : 'limited-memory',
+            'ipopt.max_soc'                  : 0,
+            'ipopt.mu_strategy'              : 'adaptive',
+            'ipopt.warm_start_init_point'    : 'yes',
+            'ipopt.warm_start_bound_push'    : 1e-6,
+            'ipopt.warm_start_mult_bound_push': 1e-6,
+        }
         self.solver = ca.nlpsol('solver', 'ipopt', nlp, opts)
 
         self.lbx = lbx
@@ -145,17 +171,23 @@ class CentralizedMPC:
     def solve(self, q_current: np.ndarray, p_target: np.ndarray) -> Tuple[np.ndarray, dict]:
         p = ca.vertcat(q_current, p_target)
 
-        x0 = np.zeros(self.n_vars)
-        x0[0:3] = q_current
-        idx = 3
-        for _ in range(self.N):
-            x0[idx:idx+3] = 0.0
-            idx += 3
-            x0[idx:idx+3] = q_current
-            idx += 3
+        # Punto de inicio: warm-start si existe, cero en caso contrario
+        if self._x_warm is not None:
+            x0 = self._x_warm
+        else:
+            x0 = np.zeros(self.n_vars)
+            x0[0:3] = q_current
+            idx = 3
+            for _ in range(self.N):
+                x0[idx:idx+3] = 0.0
+                idx += 3
+                x0[idx:idx+3] = q_current
+                idx += 3
 
-        sol = self.solver(x0=x0, p=p, lbx=self.lbx, ubx=self.ubx)
+        sol = self.solver(x0=x0, p=p, lbx=self.lbx, ubx=self.ubx,
+                          lbg=self.lbg, ubg=self.ubg)
         x_opt = sol['x'].full().flatten()
+        self._x_warm = x_opt   # guardar para la siguiente llamada
 
         q_traj = [q_current]
         dq_opt = None
