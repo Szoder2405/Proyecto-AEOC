@@ -51,11 +51,8 @@ error de seguimiento, suavidad y costo computacional.
   
 
    ```
-
    git clone <URL-del-repo>
-
    cd Proyecto-AEOC/codigo
-
    ```
 
   
@@ -65,9 +62,7 @@ error de seguimiento, suavidad y costo computacional.
   
 
    ```
-
    conda env create -f environment.yml
-
    ```
 
   
@@ -81,9 +76,7 @@ error de seguimiento, suavidad y costo computacional.
   
 
    ```
-
    conda activate brazo_robotico
-
    ```
 
   
