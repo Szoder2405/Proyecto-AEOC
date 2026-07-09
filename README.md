@@ -264,3 +264,56 @@ El entorno conda incluye:
 - Santiago Suaza – Universidad de los Andes
 
 - Daniel Niño – Universidad de los Andes
+
+---
+
+# Resultados
+
+Video: [Video Proyecto AEOC - Santiago Suaza & Daniel Niño](https://youtu.be/UMxWIIUtgmQ)
+
+Informe: [Proyecto_final_AEOC - Santiago Suaza - Daniel Niño.pdf](https://github.com/user-attachments/files/29830929/Proyecto_final_AEOC.-.Santiago.Suaza.-.Daniel.Nino.pdf)
+
+
+https://github.com/user-attachments/assets/87c3c4a6-a697-4449-99ea-0475cd3caf7f
+
+
+
+https://github.com/user-attachments/assets/dde534d7-272e-41a5-9c2b-d0294b1d71bd
+
+
+
+https://github.com/user-attachments/assets/df7127fd-205e-4c70-854b-fa26a2bf98b4
+
+
+
+https://github.com/user-attachments/assets/e4d6ce74-1bba-44a3-b51e-35e3b8d56c3f
+
+
+
+https://github.com/user-attachments/assets/4c3eafa1-80b1-46ac-ba19-0c2f3d2cd93a
+
+
+
+https://github.com/user-attachments/assets/38d846f1-f5a4-461c-8f2c-f115e4b5bcc9
+
+
+
+https://github.com/user-attachments/assets/111be9c4-2549-4ab0-a578-8e25f4f516de
+
+
+
+https://github.com/user-attachments/assets/ebabf7de-5ba3-4de9-9ca4-ef2ba65becc3
+
+
+
+https://github.com/user-attachments/assets/0fe06014-cad0-4cae-878d-48ade193a706
+
+
+
+https://github.com/user-attachments/assets/816ea9fa-c645-4480-8be3-13f637f7d30f
+
+
+
+https://github.com/user-attachments/assets/d51ca4bc-8cd0-40b3-bfba-7a216cd19ac7
+
+
